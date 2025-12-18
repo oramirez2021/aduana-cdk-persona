@@ -1,0 +1,153 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import fastify from 'fastify';
+import awslambda from '@fastify/aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context, SQSEvent } from 'aws-lambda';
+import { AppModule } from './app.module';
+
+
+let cachedServer: any;
+
+async function createNestServer() {
+  if (!cachedServer) {
+    const fastifyApp = fastify();
+
+    try {
+      const app = await NestFactory.create(AppModule, new FastifyAdapter(fastifyApp as any));
+
+      app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+      app.enableCors({ origin: process.env.CORS_ORIGIN || '*', credentials: true });
+
+      // Swagger simplificado para Fastify
+      //const cfg = new DocumentBuilder().setTitle('Aduanas Service').setVersion('1.0.0').addBearerAuth().build();
+      //const doc = SwaggerModule.createDocument(app, cfg);
+      const stage = process.env.STAGE || 'dev';
+      const cfg = new DocumentBuilder()
+        .setTitle('Aduanas Service')
+        .setVersion('1.0.0')
+        .addBearerAuth()
+        .addServer(`/${stage}`, `API Gateway ${stage} stage`)
+        .build();
+      const doc = SwaggerModule.createDocument(app, cfg);
+
+
+      // Endpoint simple para obtener la documentación JSON
+      fastifyApp.get('/api/docs-json', async (request, reply) => {
+        return doc;
+      });
+
+      // Función para generar HTML de documentación con Swagger UI
+      const generateDocsHTML = () => `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Aduanas Service API</title>
+          <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+          <style>
+            html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+            *, *:before, *:after { box-sizing: inherit; }
+            body { margin:0; background: #fafafa; }
+          </style>
+        </head>
+        <body>
+          <div id="swagger-ui"></div>
+          <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+          <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
+          <script>
+            window.onload = function() {
+              const ui = SwaggerUIBundle({
+                url: window.location.pathname.replace('/api/docs', '/api/docs-json'),
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                  SwaggerUIBundle.presets.apis,
+                  SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                  SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+              });
+            };
+          </script>
+        </body>
+        </html>
+      `;
+
+      // Endpoint simple para mostrar documentación básica (sin barra)
+      fastifyApp.get('/api/docs', async (request, reply) => {
+        reply.type('text/html');
+        return generateDocsHTML();
+      });
+
+      // Endpoint simple para mostrar documentación básica (con barra)
+      fastifyApp.get('/api/docs/', async (request, reply) => {
+        reply.type('text/html');
+        return generateDocsHTML();
+      });
+
+      await app.init();
+
+      // Health check endpoint (después de inicializar NestJS)
+      fastifyApp.get('/api/health', async (request, reply) => {
+        return { status: 'OK', ts: new Date().toISOString() };
+      });
+
+      // Obtener la instancia de Fastify desde el adapter de NestJS
+      const fastifyInstance = app.getHttpAdapter().getInstance();
+      cachedServer = awslambda(fastifyInstance);
+
+    } catch (error) {
+      console.log('Error initializing NestJS app:', error.message);
+      throw error;
+    }
+
+  }
+  return cachedServer;
+}
+
+export const handler = async (event: any, context: any) => {
+  // Health check directo sin pasar por NestJS
+  if (event.path === '/api/health' && event.httpMethod === 'GET') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+      },
+      body: JSON.stringify({
+        status: 'OK',
+        ts: new Date().toISOString(),
+        service: 'Aduanas Service',
+        version: '1.0.0'
+      })
+    };
+  }
+
+  // Detectar si es un evento SQS
+  if (event.Records && event.Records[0]?.eventSource === 'aws:sqs') {
+    console.log('Processing SQS event - SQS handler removed');
+    return {
+      statusCode: 501,
+      body: JSON.stringify({ error: 'SQS handler not implemented' })
+    };
+  }
+
+  // Detectar si es un evento HTTP (API Gateway)
+  if (event.httpMethod || event.requestContext) {
+    console.log('Processing HTTP event');
+
+    const server = await createNestServer();
+    return server(event as APIGatewayProxyEvent, context);
+  }
+
+  // Fallback para otros tipos de eventos
+  console.log('Processing unknown event type, falling back to HTTP handler');
+  const server = await createNestServer();
+  return server(event, context);
+};

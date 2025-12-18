@@ -1,0 +1,26 @@
+# AWS Configuration
+AWS_REGION=us-east-1
+AWS_ACCOUNT_ID=127358876881
+
+
+
+
+PROJECT=migration
+CLIENT=aduanas
+
+# Stage Configuration
+STAGE=dev
+
+# Optional: Profile name if using AWS profiles
+#AWS_PROFILE=127358876881_AWS-SNA-DevOps
+AWS_PROFILE=083843829920_AWS-SNA-DevOps
+
+# Database Configuration for Oracle
+DB_TYPE=oracle
+DB_HOST=172.19.100.10
+DB_PORT=1522
+DB_USERNAME=UD_EPADILLA_ARKHO
+DB_PASSWORD="fod#1025"
+DB_SID=aries
+DB_SCHEMA=FISCALIZACIONES
+DB_NAME = aries

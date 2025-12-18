@@ -1,0 +1,24 @@
+services:
+  oracle-lambda:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-oracle-lambda-container
+    environment:
+      # Variables de entorno para Oracle Client
+      - ORACLE_CLIENT_LIB_DIR=/opt/oracle/instantclient_19_3
+      - LD_LIBRARY_PATH=/opt/oracle/instantclient_19_3
+      - TNS_ADMIN=/opt/oracle/instantclient_19_3
+      # Variables de base de datos Oracle
+      - DB_TYPE=${DB_TYPE:-oracle}
+      - DB_HOST=${DB_HOST:-coyan.aduana.cl}
+      - DB_PORT=${DB_PORT:-1522}
+      - DB_USERNAME=${DB_USERNAME:-UD_EPADILLA_ARKHO}
+      - DB_PASSWORD=${DB_PASSWORD:-fod#1025}
+      - DB_SID=${DB_SID:-aries}
+      - DB_SCHEMA=${DB_SCHEMA:-FISCALIZACIONES}
+      - DB_NAME=${DB_NAME:-aries}
+      - NODE_ENV=production
+    env_file:
+      - .env
+    network_mode: "host"
