@@ -1,0 +1,86 @@
+# ==========================================
+# 🚀 AWS CDK + Node.js + TypeScript
+# ==========================================
+
+# Dependencias
+node_modules/
+
+# Salidas del CDK
+cdk.out/
+
+# Archivos compilados o de build
+dist/
+build/
+lib/*.js
+lib/*.js.map
+bin/*.js
+bin/*.js.map
+
+# Archivos de entorno (credenciales o variables)
+.env
+.env.*
+
+# Archivos temporales o de pruebas locales
+test-local.sh
+Running
+Removed
+fe7135cb7429
+ace6579c3018
+205374a066a0
+11.6.2
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Configuración del sistema o IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de caché
+*.tmp
+*.cache
+*.bak
+
+# Archivos de paquetes
+*.tgz
+
+# ==========================================
+# ⚙️ Git interno accidental
+# ==========================================
+# Evita que se versionen repositorios dentro del proyecto
+**/.git
+
+# ==========================================
+# 🧪 Testing (si aplicas Jest u otros)
+# ==========================================
+coverage/
+.nyc_output/
+
+# ==========================================
+# 🧰 Herramientas locales
+# ==========================================
+.eslintcache
+.tscache/
+tsconfig.tsbuildinfo
+
+# ==========================================
+# 🐳 Docker / Contenedores
+# ==========================================
+*.pid
+*.seed
+docker-compose.override.yml
+Dockerfile.local
+*.tar
+
+
+
+# Ignorar librerías pesadas de Oracle
+lib/fiscalizacion/layers/cx-oracle-python-layer/lib/
+
